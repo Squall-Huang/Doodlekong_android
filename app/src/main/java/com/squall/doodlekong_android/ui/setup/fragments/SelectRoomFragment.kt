@@ -7,7 +7,7 @@ import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
@@ -15,8 +15,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.squall.doodlekong_android.R
 import com.squall.doodlekong_android.adapters.RoomAdapter
 import com.squall.doodlekong_android.databinding.FragmentSelectRoomBinding
-import com.squall.doodlekong_android.ui.setup.SetupViewModel
-import com.squall.doodlekong_android.ui.setup.SetupViewModel.SetupEvent.*
+import com.squall.doodlekong_android.ui.setup.SelectRoomViewModel
+import com.squall.doodlekong_android.ui.setup.SelectRoomViewModel.SetupEvent.*
 import com.squall.doodlekong_android.util.Constants.SEARCH_DELAY
 import com.squall.doodlekong_android.util.navigateSafely
 import com.squall.doodlekong_android.util.snackbar
@@ -32,12 +32,15 @@ class SelectRoomFragment : Fragment() {
 
     private var _binding: FragmentSelectRoomBinding? = null
     private val binding get() = _binding!!
-    private val viewModel by activityViewModels<SetupViewModel>()
+
+    private val viewModel by viewModels<SelectRoomViewModel>()
 
     private val args by navArgs<SelectRoomFragmentArgs>()
 
     @Inject
     lateinit var roomAdapter: RoomAdapter
+
+    private var updateRoomsJob:Job? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -127,7 +130,8 @@ class SelectRoomFragment : Fragment() {
                     val isRoomsEmpty = event.rooms.isEmpty()
                     binding.tvNoRoomsFound.isVisible = isRoomsEmpty
                     binding.ivNoRoomsFound.isVisible = isRoomsEmpty
-                    lifecycleScope.launch {
+                    updateRoomsJob?.cancel()
+                    updateRoomsJob = lifecycleScope.launch {
                         roomAdapter.updateDataset(event.rooms)
                     }
                 }

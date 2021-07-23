@@ -4,18 +4,20 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.ArrayAdapter
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.squall.doodlekong_android.R
 import com.squall.doodlekong_android.data.remote.ws.Room
 import com.squall.doodlekong_android.databinding.FragmentCreateRoomBinding
-import com.squall.doodlekong_android.ui.setup.SetupViewModel
-import com.squall.doodlekong_android.ui.setup.SetupViewModel.SetupEvent.*
+import com.squall.doodlekong_android.ui.setup.CreateRoomViewModel
+import com.squall.doodlekong_android.ui.setup.CreateRoomViewModel.SetupEvent.*
+import com.squall.doodlekong_android.util.Constants
 import com.squall.doodlekong_android.util.navigateSafely
 import com.squall.doodlekong_android.util.snackbar
 import dagger.hilt.android.AndroidEntryPoint
@@ -27,7 +29,7 @@ class CreateRoomFragment : Fragment() {
     private var _binding: FragmentCreateRoomBinding? = null
     private val binding get() = _binding!!
 
-    private val viewModel by activityViewModels<SetupViewModel>()
+    private val viewModel by viewModels<CreateRoomViewModel>()
     private val args by navArgs<CreateRoomFragmentArgs>()
 
     override fun onCreateView(
@@ -41,6 +43,7 @@ class CreateRoomFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        requireActivity().window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
         setupRoomSizeSpinner()
         listenToEvents()
 
@@ -70,11 +73,11 @@ class CreateRoomFragment : Fragment() {
                     }
                     InputTooShortError ->{
                         binding.createRoomProgressBar.isVisible = false
-                        snackbar(R.string.error_room_name_too_short)
+                        snackbar(getString(R.string.error_room_name_too_short,Constants.MIN_ROOM_NAME_LENGTH))
                     }
                     InputTooLongError ->{
                         binding.createRoomProgressBar.isVisible = false
-                        snackbar(R.string.error_room_name_too_long)
+                        snackbar(getString(R.string.error_room_name_too_long,Constants.MAX_ROOM_NAME_LENGTH))
                     }
                     is CreateRoomErrorEvent ->{
                         binding.createRoomProgressBar.isVisible = false
@@ -94,7 +97,6 @@ class CreateRoomFragment : Fragment() {
                         binding.createRoomProgressBar.isVisible = false
                         snackbar(event.error)
                     }
-                    else -> Unit
                 }
             }
         }

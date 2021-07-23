@@ -5,13 +5,13 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.squall.doodlekong_android.R
 import com.squall.doodlekong_android.databinding.FragmentUsernameBinding
-import com.squall.doodlekong_android.ui.setup.SetupViewModel
-import com.squall.doodlekong_android.ui.setup.SetupViewModel.SetupEvent.*
+import com.squall.doodlekong_android.ui.setup.UsernameViewModel.SetupEvent.*
+import com.squall.doodlekong_android.ui.setup.UsernameViewModel
 import com.squall.doodlekong_android.util.Constants.MAX_USERNAME_LENGTH
 import com.squall.doodlekong_android.util.Constants.MIN_USERNAME_LENGTH
 import com.squall.doodlekong_android.util.navigateSafely
@@ -25,7 +25,7 @@ class UsernameFragment : Fragment() {
     private var _binding: FragmentUsernameBinding? = null
     private val binding get() = _binding!!
 
-    private val viewModel by activityViewModels<SetupViewModel>()
+    private val viewModel by viewModels<UsernameViewModel>()
 
     override fun onCreateView(
         inflater: LayoutInflater,
