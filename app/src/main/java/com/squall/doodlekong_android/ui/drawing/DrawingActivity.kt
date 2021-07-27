@@ -2,12 +2,18 @@ package com.squall.doodlekong_android.ui.drawing
 
 import android.graphics.Color
 import android.os.Bundle
+import android.view.MenuItem
+import android.view.View
 import androidx.activity.viewModels
+import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.RecyclerView
 import com.squall.doodlekong_android.R
 import com.squall.doodlekong_android.databinding.ActivityDrawingBinding
 import com.squall.doodlekong_android.util.Constants
@@ -19,14 +25,41 @@ import kotlinx.coroutines.launch
 class DrawingActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityDrawingBinding
-
     private val viewModel by viewModels<DrawingViewModel>()
+    private lateinit var toggle: ActionBarDrawerToggle
+
+    private lateinit var rvPlayers: RecyclerView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityDrawingBinding.inflate(layoutInflater)
         setContentView(binding.root)
         subscribeToUiStateUpdates()
+
+        toggle = ActionBarDrawerToggle(this, binding.root, R.string.open, R.string.close).apply {
+            syncState()
+        }
+
+        val header = layoutInflater.inflate(R.layout.nav_drawer_header, binding.navView)
+        rvPlayers = header.findViewById<RecyclerView>(R.id.rvPlayers)
+        binding.root.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
+
+        binding.ibPlayers.setOnClickListener {
+            binding.root.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
+            binding.root.openDrawer(GravityCompat.START)
+        }
+
+        binding.root.addDrawerListener(object : DrawerLayout.DrawerListener {
+            override fun onDrawerSlide(drawerView: View, slideOffset: Float) = Unit
+
+            override fun onDrawerOpened(drawerView: View): Unit = Unit
+
+            override fun onDrawerClosed(drawerView: View) {
+                binding.root.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
+            }
+
+            override fun onDrawerStateChanged(newState: Int): Unit = Unit
+        })
 
         binding.apply {
             colorGroup.setOnCheckedChangeListener { _, checkedId ->
@@ -69,5 +102,12 @@ class DrawingActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (toggle.onOptionsItemSelected(item)) {
+            return true
+        }
+        return super.onOptionsItemSelected(item)
     }
 }
