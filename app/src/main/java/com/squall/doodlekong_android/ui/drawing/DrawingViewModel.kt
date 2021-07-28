@@ -37,17 +37,36 @@ class DrawingViewModel @Inject constructor(
     private val _selectedColorButtonId = MutableStateFlow(R.id.rbBlack)
     val selectedColorButtonId get() = _selectedColorButtonId.asStateFlow()
 
+    private val _connectionProgressBarVisible = MutableStateFlow(true)
+    val connectionProgressBarVisible get() = _connectionProgressBarVisible.asStateFlow()
+
+    private val _chooseWordOverlayVisible = MutableStateFlow(false)
+    val chooseWordOverlayVisible get() = _chooseWordOverlayVisible.asStateFlow()
+
     private val connectionEventChannel = Channel<WebSocket.Event>()
     val connectionEvent = connectionEventChannel.receiveAsFlow().flowOn(dispatchers.io)
 
     private val socketEventChannel = Channel<SocketEvent>()
     val socketEvent = socketEventChannel.receiveAsFlow().flowOn(dispatchers.io)
 
+    init {
+        observeBaseModels()
+        observeEvents()
+    }
+
+    fun setChooseWordOverlayVisibility(isVisible: Boolean): Unit {
+        _chooseWordOverlayVisible.value = isVisible
+    }
+
+    fun setConnectionProgressBarVisibility(isVisible: Boolean): Unit {
+        _connectionProgressBarVisible.value = isVisible
+    }
+
     fun checkRadioButton(id: Int): Unit {
         _selectedColorButtonId.value = id
     }
 
-    fun observeEvents() {
+    private fun observeEvents() {
         viewModelScope.launch(dispatchers.io) {
             drawingApi.observeEvents().collect { event ->
                 connectionEventChannel.send(event)
@@ -55,7 +74,7 @@ class DrawingViewModel @Inject constructor(
         }
     }
 
-    fun observeBaseModels() {
+    private fun observeBaseModels() {
         viewModelScope.launch(dispatchers.io){
             drawingApi.observeBaseModels().collect {data ->
                 when (data) {
@@ -67,6 +86,7 @@ class DrawingViewModel @Inject constructor(
                             ACTION_UNDO -> socketEventChannel.send(SocketEvent.UndoEvent)
                         }
                     }
+                    is GameError -> socketEventChannel.send(SocketEvent.GameErrorEvent(data))
                     is Ping -> sendBaseModel(Ping())
                 }
             }
