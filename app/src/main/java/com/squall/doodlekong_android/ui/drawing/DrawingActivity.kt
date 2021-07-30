@@ -3,6 +3,7 @@ package com.squall.doodlekong_android.ui.drawing
 import android.graphics.Color
 import android.os.Bundle
 import android.view.MenuItem
+import android.view.MotionEvent
 import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.app.ActionBarDrawerToggle
@@ -15,9 +16,12 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.navArgs
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 import com.squall.doodlekong_android.R
+import com.squall.doodlekong_android.adapters.ChatMessageAdapter
+import com.squall.doodlekong_android.data.remote.ws.models.DrawAction
 import com.squall.doodlekong_android.data.remote.ws.models.GameError
 import com.squall.doodlekong_android.data.remote.ws.models.JoinRoomHandshake
 import com.squall.doodlekong_android.databinding.ActivityDrawingBinding
@@ -33,7 +37,6 @@ class DrawingActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityDrawingBinding
     private val viewModel by viewModels<DrawingViewModel>()
-
     private val args by navArgs<DrawingActivityArgs>()
 
     @Inject
@@ -43,19 +46,24 @@ class DrawingActivity : AppCompatActivity() {
 
     private lateinit var rvPlayers: RecyclerView
 
+    private lateinit var chatMessageAdapter: ChatMessageAdapter
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityDrawingBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-
         subscribeToUiStateUpdates()
         listenToConnectionEvents()
         listenToSocketEvents()
+        setupRecyclerView()
 
         toggle = ActionBarDrawerToggle(this, binding.root, R.string.open, R.string.close).apply {
             syncState()
         }
+
+        binding.drawingView.roomName = args.roomName
+
 
         val header = layoutInflater.inflate(R.layout.nav_drawer_header, binding.navView)
         rvPlayers = header.findViewById<RecyclerView>(R.id.rvPlayers)
@@ -77,6 +85,13 @@ class DrawingActivity : AppCompatActivity() {
 
             override fun onDrawerStateChanged(newState: Int): Unit = Unit
         })
+
+        binding.ibUndo.setOnClickListener {
+            if (binding.drawingView.isUserDrawing) {
+                binding.drawingView.undo()
+                viewModel.sendBaseModel(DrawAction(DrawAction.ACTION_UNDO))
+            }
+        }
 
         binding.apply {
             colorGroup.setOnCheckedChangeListener { _, checkedId ->
@@ -141,6 +156,25 @@ class DrawingActivity : AppCompatActivity() {
     private fun listenToSocketEvents() = lifecycleScope.launchWhenStarted {
         viewModel.socketEvent.collect { event ->
             when (event) {
+                is DrawingViewModel.SocketEvent.DrawDataEvent -> {
+                    val drawData = event.data
+                    if (!binding.drawingView.isUserDrawing) {
+                        when (drawData.motionEvent) {
+                            MotionEvent.ACTION_DOWN -> binding.drawingView.startedTouchExternally(
+                                drawData
+                            )
+                            MotionEvent.ACTION_MOVE -> binding.drawingView.movedTouchExternally(
+                                drawData
+                            )
+                            MotionEvent.ACTION_UP -> binding.drawingView.releasedTouchExternally(
+                                drawData
+                            )
+                        }
+                    }
+                }
+                is DrawingViewModel.SocketEvent.UndoEvent ->{
+                    binding.drawingView.undo()
+                }
                 is DrawingViewModel.SocketEvent.GameErrorEvent -> {
                     when (event.data.errorType) {
                         GameError.ERROR_ROOM_NOT_FOUND -> finish()
@@ -178,6 +212,12 @@ class DrawingActivity : AppCompatActivity() {
                 else -> Unit
             }
         }
+    }
+
+    private fun setupRecyclerView() = binding.rvChat.apply {
+        chatMessageAdapter = ChatMessageAdapter(args.username)
+        adapter = chatMessageAdapter
+        layoutManager = LinearLayoutManager(this@DrawingActivity)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
