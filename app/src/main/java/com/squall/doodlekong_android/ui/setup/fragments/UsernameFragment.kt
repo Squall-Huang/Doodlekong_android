@@ -14,6 +14,7 @@ import com.squall.doodlekong_android.ui.setup.UsernameViewModel.SetupEvent.*
 import com.squall.doodlekong_android.ui.setup.UsernameViewModel
 import com.squall.doodlekong_android.util.Constants.MAX_USERNAME_LENGTH
 import com.squall.doodlekong_android.util.Constants.MIN_USERNAME_LENGTH
+import com.squall.doodlekong_android.util.hideKeyboard
 import com.squall.doodlekong_android.util.navigateSafely
 import com.squall.doodlekong_android.util.snackbar
 import dagger.hilt.android.AndroidEntryPoint
@@ -45,6 +46,7 @@ class UsernameFragment : Fragment() {
                 viewModel.validateUsernameAndNavigateToSelectRoom(
                     etUsername.text.toString()
                 )
+                requireActivity().hideKeyboard(root)
             }
         }
     }

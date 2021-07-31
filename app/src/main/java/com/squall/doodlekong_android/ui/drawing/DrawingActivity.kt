@@ -24,6 +24,7 @@ import com.squall.doodlekong_android.adapters.ChatMessageAdapter
 import com.squall.doodlekong_android.data.remote.ws.models.*
 import com.squall.doodlekong_android.databinding.ActivityDrawingBinding
 import com.squall.doodlekong_android.util.Constants
+import com.squall.doodlekong_android.util.hideKeyboard
 import com.tinder.scarlet.WebSocket
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
@@ -103,6 +104,7 @@ class DrawingActivity : AppCompatActivity() {
                 )
             )
             binding.etMessage.text?.clear()
+            hideKeyboard(binding.root)
         }
 
         binding.ibUndo.setOnClickListener {

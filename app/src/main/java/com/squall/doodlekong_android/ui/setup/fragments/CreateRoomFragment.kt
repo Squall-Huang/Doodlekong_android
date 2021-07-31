@@ -18,6 +18,7 @@ import com.squall.doodlekong_android.databinding.FragmentCreateRoomBinding
 import com.squall.doodlekong_android.ui.setup.CreateRoomViewModel
 import com.squall.doodlekong_android.ui.setup.CreateRoomViewModel.SetupEvent.*
 import com.squall.doodlekong_android.util.Constants
+import com.squall.doodlekong_android.util.hideKeyboard
 import com.squall.doodlekong_android.util.navigateSafely
 import com.squall.doodlekong_android.util.snackbar
 import dagger.hilt.android.AndroidEntryPoint
@@ -56,6 +57,7 @@ class CreateRoomFragment : Fragment() {
                         tvMaxPersons.text.toString().toInt()
                     )
                 )
+                requireActivity().hideKeyboard(root)
             }
         }
     }
