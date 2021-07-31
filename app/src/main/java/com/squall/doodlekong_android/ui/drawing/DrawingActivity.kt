@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 import com.squall.doodlekong_android.R
 import com.squall.doodlekong_android.adapters.ChatMessageAdapter
+import com.squall.doodlekong_android.data.remote.ws.Room
 import com.squall.doodlekong_android.data.remote.ws.models.*
 import com.squall.doodlekong_android.databinding.ActivityDrawingBinding
 import com.squall.doodlekong_android.util.Constants
@@ -142,31 +143,106 @@ class DrawingActivity : AppCompatActivity() {
                 }
             }
         }
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.selectedColorButtonId.collect { id ->
-                    binding.apply {
-                        colorGroup.check(id)
-                        when (id) {
-                            R.id.rbBlack -> selectColor(Color.BLACK)
-                            R.id.rbBlue -> selectColor(Color.BLUE)
-                            R.id.rbGreen -> selectColor(Color.GREEN)
-                            R.id.rbOrange -> selectColor(
-                                ContextCompat.getColor(
-                                    this@DrawingActivity,
-                                    R.color.orange
-                                )
+        lifecycleScope.launchWhenStarted {
+            viewModel.newWords.collect {
+                val newWords = it.newWords
+                if (newWords.isEmpty()) {
+                    return@collect
+                }
+                binding.apply {
+                    btnFirstWord.text = newWords[0]
+                    btnSecondWord.text = newWords[1]
+                    btnThirdWord.text = newWords[2]
+                    btnFirstWord.setOnClickListener {
+                        viewModel.chooseWord(newWords[0], args.roomName)
+                        viewModel.setChooseWordOverlayVisibility(false)
+                    }
+                    btnSecondWord.setOnClickListener {
+                        viewModel.chooseWord(newWords[1], args.roomName)
+                        viewModel.setChooseWordOverlayVisibility(false)
+                    }
+                    btnThirdWord.setOnClickListener {
+                        viewModel.chooseWord(newWords[2], args.roomName)
+                        viewModel.setChooseWordOverlayVisibility(false)
+                    }
+                }
+            }
+        }
+        lifecycleScope.launchWhenStarted {
+            viewModel.selectedColorButtonId.collect { id ->
+                binding.apply {
+                    colorGroup.check(id)
+                    when (id) {
+                        R.id.rbBlack -> selectColor(Color.BLACK)
+                        R.id.rbBlue -> selectColor(Color.BLUE)
+                        R.id.rbGreen -> selectColor(Color.GREEN)
+                        R.id.rbOrange -> selectColor(
+                            ContextCompat.getColor(
+                                this@DrawingActivity,
+                                R.color.orange
                             )
-                            R.id.rbRed -> selectColor(Color.RED)
-                            R.id.rbYellow -> selectColor(Color.YELLOW)
-                            R.id.rbEraser -> {
-                                drawingView.setColor(Color.WHITE)
-                                drawingView.setThickness(40f)
-                            }
+                        )
+                        R.id.rbRed -> selectColor(Color.RED)
+                        R.id.rbYellow -> selectColor(Color.YELLOW)
+                        R.id.rbEraser -> {
+                            drawingView.setColor(Color.WHITE)
+                            drawingView.setThickness(40f)
                         }
                     }
                 }
+            }
+        }
+        lifecycleScope.launchWhenStarted {
+            viewModel.phaseTime.collect { time ->
+                binding.roundTimerProgressBar.progress = time.toInt()
+                binding.tvRemainingTimeChooseWord.text = (time/1000L).toString()
+            }
+        }
 
+        lifecycleScope.launchWhenStarted {
+            viewModel.phase.collect { phase ->
+                when (phase.phase) {
+                    Room.Phase.WAITING_FOR_PLAYERS -> {
+                        binding.tvCurWord.text = getString(R.string.waiting_for_players)
+                        viewModel.cancelTimer()
+                        viewModel.setConnectionProgressBarVisibility(false)
+                        binding.roundTimerProgressBar.progress = binding.roundTimerProgressBar.max
+                    }
+                    Room.Phase.WAITING_FOR_START -> {
+                        binding.roundTimerProgressBar.max = phase.time.toInt()
+                        binding.tvCurWord.text = getString(R.string.waiting_for_start)
+                    }
+                    Room.Phase.NEW_ROUND -> {
+                        phase.drawingPlayer?.let { player ->
+                            binding.tvCurWord.text =
+                                getString(R.string.player_is_drawing, player)
+                        }
+                        binding.apply {
+                            drawingView.isEnabled = false
+                            drawingView.setColor(Color.BLACK)
+                            drawingView.setThickness(Constants.DEFAULT_PAINT_THICKNESS)
+                            roundTimerProgressBar.max = phase.time.toInt()
+                            val isUserDrawingPlayer = phase.drawingPlayer == args.username
+                            binding.chooseWordOverlay.isVisible = isUserDrawingPlayer
+                        }
+                    }
+                    Room.Phase.GAME_RUNNING -> {
+                        binding.chooseWordOverlay.isVisible = false
+                        binding.roundTimerProgressBar.max = phase.time.toInt()
+                    }
+                    Room.Phase.SHOW_WORD -> {
+                        binding.apply {
+                            if (drawingView.isDrawing) {
+                                drawingView.finishOffDrawing()
+                            }
+                            drawingView.isEnabled = false
+                            drawingView.setColor(Color.BLACK)
+                            drawingView.setThickness(Constants.DEFAULT_PAINT_THICKNESS)
+                            roundTimerProgressBar.max = phase.time.toInt()
+                        }
+                    }
+                    else -> Unit
+                }
             }
         }
         lifecycleScope.launchWhenStarted {
@@ -199,6 +275,10 @@ class DrawingActivity : AppCompatActivity() {
                             )
                         }
                     }
+                }
+                is DrawingViewModel.SocketEvent.ChosenWordEvent->{
+                    binding.tvCurWord.text = event.data.chosenWord
+                    binding.ibUndo.isEnabled = false
                 }
                 is DrawingViewModel.SocketEvent.ChatMessageEvent -> {
                     addChatObjectToRecyclerView(event.data)
