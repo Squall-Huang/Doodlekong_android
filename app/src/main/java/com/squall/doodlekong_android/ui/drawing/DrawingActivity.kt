@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 import com.squall.doodlekong_android.R
 import com.squall.doodlekong_android.adapters.ChatMessageAdapter
+import com.squall.doodlekong_android.adapters.PlayerAdapter
 import com.squall.doodlekong_android.data.remote.ws.Room
 import com.squall.doodlekong_android.data.remote.ws.models.*
 import com.squall.doodlekong_android.databinding.ActivityDrawingBinding
@@ -46,6 +47,9 @@ class DrawingActivity : AppCompatActivity() {
     private lateinit var toggle: ActionBarDrawerToggle
 
     private lateinit var rvPlayers: RecyclerView
+
+    @Inject
+    private lateinit var playerAdapter: PlayerAdapter
 
     private lateinit var chatMessageAdapter: ChatMessageAdapter
 
@@ -73,6 +77,11 @@ class DrawingActivity : AppCompatActivity() {
         val header = layoutInflater.inflate(R.layout.nav_drawer_header, binding.navView)
         rvPlayers = header.findViewById<RecyclerView>(R.id.rvPlayers)
         binding.root.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
+
+        rvPlayers.apply {
+            adapter = playerAdapter
+            layoutManager = LinearLayoutManager(this@DrawingActivity)
+        }
 
         binding.ibPlayers.setOnClickListener {
             binding.root.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
