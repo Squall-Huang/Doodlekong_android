@@ -1,10 +1,12 @@
 package com.squall.doodlekong_android.ui.drawing
 
+import android.Manifest
 import android.graphics.Color
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.MotionEvent
 import android.view.View
+import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
@@ -31,14 +33,20 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import pub.devrel.easypermissions.AppSettingsDialog
+import pub.devrel.easypermissions.EasyPermissions
 import javax.inject.Inject
 
+private const val REQUEST_CODE_RECORD_AUDIO = 1
+
 @AndroidEntryPoint
-class DrawingActivity : AppCompatActivity(),LifecycleObserver {
+class DrawingActivity : AppCompatActivity(), LifecycleObserver,
+    EasyPermissions.PermissionCallbacks {
 
     private lateinit var binding: ActivityDrawingBinding
     private val viewModel by viewModels<DrawingViewModel>()
     private val args by navArgs<DrawingActivityArgs>()
+
     @Inject
     lateinit var clientId: String
 
@@ -142,6 +150,42 @@ class DrawingActivity : AppCompatActivity(),LifecycleObserver {
         }
     }
 
+    private fun hasRecordAudioPermission() = EasyPermissions.hasPermissions(
+        this,
+        Manifest.permission.RECORD_AUDIO
+    )
+
+    private fun requestRecordAudioPermission() {
+        EasyPermissions.requestPermissions(
+            this,
+            getString(R.string.rationale_record_audio),
+            REQUEST_CODE_RECORD_AUDIO,
+            Manifest.permission.RECORD_AUDIO
+        )
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults,this)
+    }
+
+    override fun onPermissionsGranted(requestCode: Int, perms: MutableList<String>) {
+        if (requestCode == REQUEST_CODE_RECORD_AUDIO) {
+            Toast.makeText(this, R.string.speech_to_text_info, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    override fun onPermissionsDenied(requestCode: Int, perms: MutableList<String>) {
+        if (EasyPermissions.somePermissionPermanentlyDenied(this, perms)) {
+            AppSettingsDialog.Builder(this).build().show()
+        }
+    }
+
     private fun setColorGroupVisibility(isVisible: Boolean): Unit {
         binding.colorGroup.isVisible = isVisible
         binding.ibUndo.isVisible = isVisible
@@ -221,7 +265,7 @@ class DrawingActivity : AppCompatActivity(),LifecycleObserver {
         }
 
         lifecycleScope.launchWhenStarted {
-            viewModel.gameState.collect{gameState ->
+            viewModel.gameState.collect { gameState ->
                 binding.apply {
                     tvCurWord.text = gameState.word
                     val isUserDrawing = gameState.drawingPlayer == args.username
@@ -241,7 +285,7 @@ class DrawingActivity : AppCompatActivity(),LifecycleObserver {
         lifecycleScope.launchWhenStarted {
             viewModel.phaseTime.collect { time ->
                 binding.roundTimerProgressBar.progress = time.toInt()
-                binding.tvRemainingTimeChooseWord.text = (time/1000L).toString()
+                binding.tvRemainingTimeChooseWord.text = (time / 1000L).toString()
             }
         }
 
@@ -322,13 +366,13 @@ class DrawingActivity : AppCompatActivity(),LifecycleObserver {
                         }
                     }
                 }
-                is DrawingViewModel.SocketEvent.RoundDrawInfoEvent->{
+                is DrawingViewModel.SocketEvent.RoundDrawInfoEvent -> {
                     binding.drawingView.update(event.data)
                 }
-                is DrawingViewModel.SocketEvent.GameStateEvent->{
+                is DrawingViewModel.SocketEvent.GameStateEvent -> {
                     binding.drawingView.clear()
                 }
-                is DrawingViewModel.SocketEvent.ChosenWordEvent->{
+                is DrawingViewModel.SocketEvent.ChosenWordEvent -> {
                     binding.tvCurWord.text = event.data.chosenWord
                     binding.ibUndo.isEnabled = false
                 }
