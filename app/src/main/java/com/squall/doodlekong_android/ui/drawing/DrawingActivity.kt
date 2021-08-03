@@ -23,6 +23,7 @@ import com.squall.doodlekong_android.adapters.PlayerAdapter
 import com.squall.doodlekong_android.data.remote.ws.Room
 import com.squall.doodlekong_android.data.remote.ws.models.*
 import com.squall.doodlekong_android.databinding.ActivityDrawingBinding
+import com.squall.doodlekong_android.ui.dialogs.LeaveDialog
 import com.squall.doodlekong_android.util.Constants
 import com.squall.doodlekong_android.util.hideKeyboard
 import com.tinder.scarlet.WebSocket
@@ -423,5 +424,14 @@ class DrawingActivity : AppCompatActivity(),LifecycleObserver {
     @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
     private fun onAppInBackground() {
         viewModel.disconnect()
+    }
+
+    override fun onBackPressed() {
+        LeaveDialog().apply {
+            setPositiveClickListerner {
+                viewModel.disconnect()
+                finish()
+            }
+        }.show(supportFragmentManager, null)
     }
 }
