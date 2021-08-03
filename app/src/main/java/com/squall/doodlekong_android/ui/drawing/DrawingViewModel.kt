@@ -3,12 +3,15 @@ package com.squall.doodlekong_android.ui.drawing
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
+import com.google.gson.JsonParser
 import com.squall.doodlekong_android.R
 import com.squall.doodlekong_android.data.remote.ws.DrawingApi
 import com.squall.doodlekong_android.data.remote.ws.Room
 import com.squall.doodlekong_android.data.remote.ws.models.*
 import com.squall.doodlekong_android.data.remote.ws.models.DrawAction.Companion.ACTION_UNDO
 import com.squall.doodlekong_android.ui.views.DrawingView
+import com.squall.doodlekong_android.util.Constants.TYPE_DRAW_ACTION
+import com.squall.doodlekong_android.util.Constants.TYPE_DRAW_DATA
 import com.squall.doodlekong_android.util.CoroutineTimer
 import com.squall.doodlekong_android.util.DispatcherProvider
 import com.tinder.scarlet.WebSocket
@@ -35,7 +38,7 @@ class DrawingViewModel @Inject constructor(
         data class NewWordsEvent(val data: NewWords) : SocketEvent()
         data class ChosenWordEvent(val data: ChosenWord) : SocketEvent()
         data class GameErrorEvent(val data: GameError) : SocketEvent()
-        data class RoundDrawInfoEvent(val data: RoundDrawInfo) : SocketEvent()
+        data class RoundDrawInfoEvent(val data: List<BaseModel>) : SocketEvent()
         object UndoEvent : SocketEvent()
     }
 
@@ -127,23 +130,36 @@ class DrawingViewModel @Inject constructor(
                     is DrawData -> {
                         socketEventChannel.send(SocketEvent.DrawDataEvent(data))
                     }
-                    is ChatMessage ->{
+                    is ChatMessage -> {
                         socketEventChannel.send(SocketEvent.ChatMessageEvent(data))
                     }
-                    is ChosenWord ->{
+                    is ChosenWord -> {
                         socketEventChannel.send(SocketEvent.ChosenWordEvent(data))
                     }
-                    is Announcement ->{
+                    is RoundDrawInfo -> {
+                        val drawActions = mutableListOf<BaseModel>()
+                        data.data.forEach { drawAction ->
+                            val jsonObject = JsonParser.parseString(drawAction).asJsonObject
+                            val type = when (jsonObject.get("type").asString) {
+                                TYPE_DRAW_DATA -> DrawData::class.java
+                                TYPE_DRAW_ACTION -> DrawAction::class.java
+                                else -> BaseModel::class.java
+                            }
+                            drawActions.add(gson.fromJson(drawAction,type))
+                        }
+                        socketEventChannel.send(SocketEvent.RoundDrawInfoEvent(drawActions))
+                    }
+                    is Announcement -> {
                         socketEventChannel.send(SocketEvent.AnnouncementEvent(data))
                     }
-                    is GameState ->{
+                    is GameState -> {
                         _gameState.value = data
                         socketEventChannel.send(SocketEvent.GameStateEvent(data))
                     }
-                    is PlayersList ->{
+                    is PlayersList -> {
                         _players.value = data.players
                     }
-                    is NewWords ->{
+                    is NewWords -> {
                         _newWords.value = data
                         socketEventChannel.send(SocketEvent.NewWordsEvent(data))
                     }
@@ -152,7 +168,7 @@ class DrawingViewModel @Inject constructor(
                             ACTION_UNDO -> socketEventChannel.send(SocketEvent.UndoEvent)
                         }
                     }
-                    is PhaseChange->{
+                    is PhaseChange -> {
                         data.phase?.let {
                             _phase.value = data
                         }
@@ -166,6 +182,10 @@ class DrawingViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun disconnect() {
+        sendBaseModel(DisconnectRequest())
     }
 
     fun chooseWord(word: String, roomName: String): Unit {

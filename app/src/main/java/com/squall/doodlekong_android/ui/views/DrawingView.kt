@@ -4,7 +4,11 @@ import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
 import android.view.MotionEvent
+import android.view.MotionEvent.*
 import android.view.View
+import com.squall.doodlekong_android.data.remote.ws.models.BaseModel
+import com.squall.doodlekong_android.data.remote.ws.models.DrawAction
+import com.squall.doodlekong_android.data.remote.ws.models.DrawAction.Companion.ACTION_UNDO
 import com.squall.doodlekong_android.data.remote.ws.models.DrawData
 import com.squall.doodlekong_android.util.Constants
 import java.util.*
@@ -57,6 +61,25 @@ class DrawingView @JvmOverloads constructor(
 
     fun setPathDataChangedListener(listener: (Stack<PathData>) -> Unit): Unit {
         pathDataChangedListener = listener
+    }
+
+    fun update(drawActions: List<BaseModel>): Unit {
+        drawActions.forEach { drawAction ->
+            when (drawAction) {
+                is DrawData ->{
+                    when (drawAction.motionEvent) {
+                        ACTION_DOWN -> startedTouchExternally(drawAction)
+                        ACTION_MOVE -> movedTouchExternally(drawAction)
+                        ACTION_UP -> releasedTouchExternally(drawAction)
+                    }
+                }
+                is DrawAction ->{
+                    when (drawAction.action) {
+                        ACTION_UNDO -> undo()
+                    }
+                }
+            }
+        }
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
