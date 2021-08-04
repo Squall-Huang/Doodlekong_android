@@ -152,7 +152,7 @@ class DrawingActivity : AppCompatActivity(), LifecycleObserver,
         binding.ibMic.setOnClickListener {
             if (!viewModel.speechToTextEnabled.value && hasRecordAudioPermission()) {
                 viewModel.startListening()
-            }else if (!viewModel.speechToTextEnabled.value) {
+            } else if (!viewModel.speechToTextEnabled.value) {
                 requestRecordAudioPermission()
             } else {
                 viewModel.stopListening()
@@ -299,6 +299,11 @@ class DrawingActivity : AppCompatActivity(), LifecycleObserver,
             }
         }
         lifecycleScope.launchWhenStarted {
+            viewModel.pathData.collect { pathData ->
+                binding.drawingView.setPaths(pathData)
+            }
+        }
+        lifecycleScope.launchWhenStarted {
             viewModel.chat.collect { chat ->
                 if (chatMessageAdapter.chatObjects.isEmpty()) {
                     updateChatMessageList(chat)
@@ -362,6 +367,7 @@ class DrawingActivity : AppCompatActivity(), LifecycleObserver,
                     val isUserDrawing = gameState.drawingPlayer == args.username
                     setColorGroupVisibility(isUserDrawing)
                     setMessageInputVisibility(!isUserDrawing)
+                    ibUndo.isEnabled = isUserDrawing
                     drawingView.isUserDrawing = isUserDrawing
                     ibMic.isVisible = !isUserDrawing
                     drawingView.isEnabled = isUserDrawing
